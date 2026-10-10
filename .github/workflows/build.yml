@@ -39,9 +39,24 @@ jobs:
                 os: [ windows-latest, ubuntu-latest, macos-15-intel ]
         steps:
             -   uses: actions/checkout@v7
+                with:
+                    fetch-depth: 0
             -   name: Set up JDK
                 uses: ./.github/actions/java-setup
                 with:
                     cache: 'maven'
+            -   name: Cache SonarQube packages
+                if: matrix.os == 'ubuntu-latest'
+                uses: actions/cache@v4
+                with:
+                    path: ~/.sonar/cache
+                    key: ${{ runner.os }}-sonar
+                    restore-keys: ${{ runner.os }}-sonar
             -   name: Build with Maven
+                if: matrix.os != 'ubuntu-latest'
                 run: mvn --no-transfer-progress verify
+            -   name: Build and analyze
+                if: matrix.os == 'ubuntu-latest'
+                env:
+                    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+                run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=MadelinRobles_WebGoat
